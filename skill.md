@@ -63,29 +63,10 @@ Good report sections include:
 For usage documentation, keep it practical:
 
 - Install
-- Recommended Workflow
-- Core Commands
-- Validation
-- Conversion
-- Environment Check
+- Convert a single file
+- Convert a directory
+- Style presets
 - Writing Guidance
-
-## Markdown Format
-
-Use conversion-friendly Markdown that maps cleanly to DOCX styles:
-
-```md
-# Report Title
-
-**Project:** Project Name  
-**Document Type:** Engineering Report  
-**Version:** 1.0  
-**Author:** Owner  
-**Date:** YYYY-MM-DD  
-**Status:** Draft for owner review  
-
----
-```
 
 The `mdx` converter treats this leading title block as report metadata and builds a DOCX cover page from it automatically. The cover page layout follows a professional visual hierarchy:
 
@@ -157,15 +138,28 @@ Default: `professional`.
 
 ## Conversion Workflow
 
+Convert a single file (outputs `.docx` alongside the source):
+
 ```bash
-mdx validate docs --strict
-mdx batch docs --output-dir docs --style professional --force
+mdx convert docs/engineering-report.md
 ```
 
-For a single file:
+With explicit output path:
 
 ```bash
-mdx convert docs/engineering-report.md --output docs/engineering-report.docx --style professional --force
+mdx convert docs/engineering-report.md --output docs/engineering-report.docx
+```
+
+Convert an entire directory at once:
+
+```bash
+mdx convert docs/ --style professional --force
+```
+
+Check the installed version:
+
+```bash
+mdx version
 ```
 
 Before finishing, verify that DOCX files open with `python-docx` and check at least title metadata, page size, header text, table count, and paragraph count.

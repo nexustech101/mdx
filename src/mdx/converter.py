@@ -76,11 +76,6 @@ def _render_markdown(document: DocumentType, markdown: str, preset: StylePreset)
             level = int(token.tag[1])
             inline = tokens[i + 1] if i + 1 < len(tokens) else None
             paragraph = document.add_heading(level=level)
-            # H1 and H2 get a subtle bottom rule for visual separation.
-            if level == 1:
-                _set_paragraph_bottom_border(paragraph, color=rgb_hex(preset.accent_color), size="10")
-            elif level == 2:
-                _set_paragraph_bottom_border(paragraph, color="D9D9D9", size="6")
             if inline and inline.type == "inline":
                 _append_inline(paragraph, inline, preset)
             i += 3
@@ -335,7 +330,7 @@ def _add_cover_page(document: DocumentType, header: ReportHeader, preset: StyleP
     # ── Title ─────────────────────────────────────────────────────────────────
     title_para = document.add_paragraph(style="Title")
     title_para.add_run(header.title)
-    title_para.paragraph_format.space_before = Pt(60)
+    title_para.paragraph_format.space_before = Pt(16)
     title_para.paragraph_format.space_after = Pt(4)
 
     # ── Subtitle: "Document Type" field rendered as italic sub-heading ─────────
