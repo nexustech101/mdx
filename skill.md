@@ -13,13 +13,17 @@ Prefer fewer, better documents. Do not create a five-document template pack unle
 
 Default to:
 
-1. `docs/engineering-report.md`
-2. `docs/usage-guide.md`
+1) `docs/engineering-report.md`
+2) `docs/architecture.md`
+3) `docs/project-spec.md`
+4) `docs/api-reference.md`
 
 Then convert them to:
 
 1. `docs/engineering-report.docx`
-2. `docs/usage-guide.docx`
+2. `docs/architecture.docx`
+3. `docs/project-spec.docx`
+4. `docs/api-reference.docx`
 
 Keep all Markdown and DOCX deliverables in `docs`. Do not create a separate `dist/docx` tree unless the user explicitly requests that layout.
 
@@ -83,7 +87,15 @@ Use conversion-friendly Markdown that maps cleanly to DOCX styles:
 ---
 ```
 
-The `mdx` converter treats this leading title block as report metadata and builds a DOCX cover page from it automatically.
+The `mdx` converter treats this leading title block as report metadata and builds a DOCX cover page from it automatically. The cover page layout follows a professional visual hierarchy:
+
+1. **Thick accent rule** across the top of the page.
+2. **Title** — large, bold, left-aligned (32 pt, preset heading font).
+3. **Subtitle** — the `Document Type` field is pulled out and rendered as a 14 pt italic line beneath the title, in the preset heading color.
+4. **Separator rule** — thin accent line below the title/subtitle block.
+5. **Metadata table** — all remaining fields (`Project`, `Version`, `Author`, `Date`, `Status`, etc.) appear in a borderless two-column table. The left column (bold label) is 1.5 in wide; the right column (value) is 4.5 in wide. This replaces tab-aligned paragraphs and ensures consistent alignment regardless of label length.
+
+Only `Document Type` is treated as the subtitle. All other fields appear in the table in the order they appear in the Markdown. Field names are rendered verbatim — use concise, title-case labels.
 
 ### Inline Formatting Support
 
@@ -95,7 +107,7 @@ The converter faithfully reproduces all standard inline formatting:
 | `*italic*` or `_italic_` | Italic runs |
 | `` `code` `` | Monospace with background shading |
 | `[link](url)` | Underlined, colored hyperlink text |
-| `~~strikethrough~~` | Struck-through run (requires strikethrough plugin) |
+| `~~strikethrough~~` | Struck-through run |
 
 ### Lists
 
@@ -131,15 +143,15 @@ Inline images cannot be embedded without the source file. The converter renders 
 
 ## Style Presets
 
-The `--style` flag selects a typography and color scheme. All presets use widely available fonts.
+The `--style` flag selects a typography and color scheme. All presets use widely available fonts. Table headers use dark fills with white text for professional, technical, executive, and minimal; academic uses a light grey fill with dark text.
 
-| Preset | Body font | Heading font | Best for |
-|--------|-----------|--------------|----------|
-| `professional` | Calibri 11pt | Calibri Light | Client deliverables, consulting reports |
-| `technical` | Segoe UI 10pt | Segoe UI | Internal technical specs, architecture docs |
-| `executive` | Georgia 11pt | Georgia | Board-level summaries, executive briefings |
-| `academic` | Times New Roman 12pt | Times New Roman | Research papers, formal academic writing |
-| `minimal` | Arial 10pt | Arial | Internal memos, quick reference docs |
+| Preset | Body font | Heading font | Line spacing | Best for |
+|--------|-----------|--------------|--------------|----------|
+| `professional` | Calibri 11pt | Calibri Light | 1.3× | Client deliverables, consulting reports |
+| `technical` | Segoe UI 10pt | Segoe UI | 1.25× | Internal technical specs, architecture docs |
+| `executive` | Georgia 11pt | Georgia | 1.3× | Board-level summaries, executive briefings |
+| `academic` | Times New Roman 12pt | Times New Roman | 2.0× | Research papers, formal academic writing |
+| `minimal` | Arial 10pt | Arial | 1.15× | Internal memos, quick reference docs |
 
 Default: `professional`.
 

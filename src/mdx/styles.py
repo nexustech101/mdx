@@ -21,7 +21,8 @@ class StylePreset:
     table_header_fill: str
     code_fill: str
     code_font: str
-    line_spacing: float = 1.15
+    line_spacing: float = 1.3
+    header_text_color: str = "FFFFFF"
 
 
 STYLE_PRESETS: dict[str, StylePreset] = {
@@ -33,10 +34,10 @@ STYLE_PRESETS: dict[str, StylePreset] = {
         heading_font="Calibri Light",
         heading_color=(31, 58, 95),    # deep navy
         accent_color=(43, 87, 154),    # royal blue
-        table_header_fill="D6E4F0",
+        table_header_fill="1F3A5F",
         code_fill="F2F4F7",
         code_font="Consolas",
-        line_spacing=1.15,
+        line_spacing=1.3,
     ),
     # High-density technical documentation — Segoe UI throughout.
     "technical": StylePreset(
@@ -46,10 +47,10 @@ STYLE_PRESETS: dict[str, StylePreset] = {
         heading_font="Segoe UI",
         heading_color=(18, 18, 30),    # near-black navy
         accent_color=(22, 66, 128),    # dark blue
-        table_header_fill="D0E4F5",
+        table_header_fill="162D50",
         code_fill="F0F2F5",
         code_font="Consolas",
-        line_spacing=1.2,
+        line_spacing=1.25,
     ),
     # Formal client-facing reports — Georgia for a polished serif look.
     "executive": StylePreset(
@@ -59,10 +60,10 @@ STYLE_PRESETS: dict[str, StylePreset] = {
         heading_font="Georgia",
         heading_color=(32, 32, 32),    # near-black
         accent_color=(100, 40, 130),   # deep purple
-        table_header_fill="EDE0F8",
+        table_header_fill="4A1A6E",
         code_fill="F8F6FF",
         code_font="Consolas",
-        line_spacing=1.2,
+        line_spacing=1.3,
     ),
     # Academic / research papers — Times New Roman double-spaced.
     "academic": StylePreset(
@@ -72,10 +73,11 @@ STYLE_PRESETS: dict[str, StylePreset] = {
         heading_font="Times New Roman",
         heading_color=(0, 0, 0),
         accent_color=(70, 70, 70),
-        table_header_fill="E8E8E8",
+        table_header_fill="CCCCCC",
         code_fill="F8F8F8",
         code_font="Courier New",
         line_spacing=2.0,
+        header_text_color="111111",
     ),
     # Stripped-back internal docs — Arial, no decoration.
     "minimal": StylePreset(
@@ -85,10 +87,10 @@ STYLE_PRESETS: dict[str, StylePreset] = {
         heading_font="Arial",
         heading_color=(0, 0, 0),
         accent_color=(80, 80, 80),
-        table_header_fill="EBEBEB",
+        table_header_fill="333333",
         code_fill="F7F7F7",
         code_font="Consolas",
-        line_spacing=1.1,
+        line_spacing=1.15,
     ),
 }
 
@@ -115,8 +117,8 @@ def apply_document_style(document: DocumentType, preset_name: str) -> StylePrese
     section.page_width = Inches(8.5)
     section.top_margin = Inches(1)
     section.bottom_margin = Inches(1)
-    section.left_margin = Inches(1.1)
-    section.right_margin = Inches(1.1)
+    section.left_margin = Inches(1.25)
+    section.right_margin = Inches(1.25)
     section.header_distance = Inches(0.5)
     section.footer_distance = Inches(0.5)
 
@@ -124,7 +126,7 @@ def apply_document_style(document: DocumentType, preset_name: str) -> StylePrese
     normal = document.styles["Normal"]
     normal.font.name = preset.body_font
     normal.font.size = Pt(preset.body_size)
-    normal.paragraph_format.space_after = Pt(8)
+    normal.paragraph_format.space_after = Pt(6)
     normal.paragraph_format.line_spacing = preset.line_spacing
 
     # ── Headings ─────────────────────────────────────────────────────────────

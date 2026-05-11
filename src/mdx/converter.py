@@ -333,25 +333,53 @@ def _add_cover_page(document: DocumentType, header: ReportHeader, preset: StyleP
     _set_paragraph_bottom_border(accent_bar, color=rgb_hex(preset.accent_color), size="24")
 
     # ── Title ─────────────────────────────────────────────────────────────────
-    title = document.add_paragraph(style="Title")
-    title.add_run(header.title)
-    title.paragraph_format.space_before = Pt(60)
-    title.paragraph_format.space_after = Pt(6)
-    _set_paragraph_bottom_border(title, color=rgb_hex(preset.accent_color), size="12")
+    title_para = document.add_paragraph(style="Title")
+    title_para.add_run(header.title)
+    title_para.paragraph_format.space_before = Pt(60)
+    title_para.paragraph_format.space_after = Pt(4)
 
-    # ── Metadata block ────────────────────────────────────────────────────────
-    for label, value in header.metadata:
-        para = document.add_paragraph()
-        para.paragraph_format.space_after = Pt(2)
-        label_run = para.add_run(f"{label}:")
-        label_run.bold = True
-        label_run.font.name = preset.body_font
-        label_run.font.size = Pt(preset.body_size)
-        # Tab-align the value column for a clean two-column appearance.
-        para.add_run("\t")
-        value_run = para.add_run(value)
-        value_run.font.name = preset.body_font
-        value_run.font.size = Pt(preset.body_size)
+    # ── Subtitle: "Document Type" field rendered as italic sub-heading ─────────
+    meta_dict = {k: v for k, v in header.metadata}
+    subtitle = meta_dict.get("Document Type", "")
+    body_meta = [(k, v) for k, v in header.metadata if k != "Document Type"]
+
+    if subtitle:
+        sub_para = document.add_paragraph()
+        sub_para.paragraph_format.space_before = Pt(0)
+        sub_para.paragraph_format.space_after = Pt(8)
+        sub_run = sub_para.add_run(subtitle)
+        sub_run.font.name = preset.heading_font
+        sub_run.font.size = Pt(14)
+        sub_run.italic = True
+        sub_run.font.color.rgb = RGBColor(*preset.heading_color)
+
+    # ── Separator rule ────────────────────────────────────────────────────────
+    sep = document.add_paragraph()
+    sep.paragraph_format.space_before = Pt(0)
+    sep.paragraph_format.space_after = Pt(20)
+    _set_paragraph_bottom_border(sep, color=rgb_hex(preset.accent_color), size="8")
+
+    # ── Metadata: borderless two-column table ─────────────────────────────────
+    if body_meta:
+        tbl = document.add_table(rows=len(body_meta), cols=2)
+        tbl.autofit = False
+        for row_idx, (label, value) in enumerate(body_meta):
+            row = tbl.rows[row_idx]
+            lc = row.cells[0]
+            lp = lc.paragraphs[0]
+            lp.paragraph_format.space_after = Pt(3)
+            lr = lp.add_run(label)
+            lr.bold = True
+            lr.font.name = preset.body_font
+            lr.font.size = Pt(preset.body_size)
+            _cover_meta_cell(lc, width_twips=2160)  # 1.5 in
+            vc = row.cells[1]
+            vp = vc.paragraphs[0]
+            vp.paragraph_format.space_after = Pt(3)
+            vr = vp.add_run(value)
+            vr.font.name = preset.body_font
+            vr.font.size = Pt(preset.body_size)
+            _cover_meta_cell(vc, width_twips=6480)  # 4.5 in
 
     document.add_page_break()
 
@@ -409,15 +437,50 @@ def _append_preserved_text(run, text: str) -> None:
 
 def _format_header_cell(cell, preset: StylePreset) -> None:
     _shade_cell(cell, preset.table_header_fill)
+    _set_cell_margins(cell)
+    r, g, b = (
+        int(preset.header_text_color[0:2], 16),
+        int(preset.header_text_color[2:4], 16),
+        int(preset.header_text_color[4:6], 16),
+    )
     for paragraph in cell.paragraphs:
         paragraph.paragraph_format.space_after = Pt(0)
         for run in paragraph.runs:
             run.bold = True
+            run.font.color.rgb = RGBColor(r, g, b)
 
 
 def _format_body_cell(cell) -> None:
+    _set_cell_margins(cell)
     for paragraph in cell.paragraphs:
         paragraph.paragraph_format.space_after = Pt(0)
+
+
+def _cover_meta_cell(cell, *, width_twips: int) -> None:
+    """Set width and remove all borders on a cover-page metadata table cell."""
+    tc_pr = cell._tc.get_or_add_tcPr()
+    tcW = OxmlElement("w:tcW")
+    tcW.set(qn("w:w"), str(width_twips))
+    tcW.set(qn("w:type"), "dxa")
+    tc_pr.append(tcW)
+    borders = OxmlElement("w:tcBorders")
+    for side in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = OxmlElement(f"w:{side}")
+        el.set(qn("w:val"), "nil")
+        borders.append(el)
+    tc_pr.append(borders)
+
+
+def _set_cell_margins(cell) -> None:
+    """Add comfortable padding inside a table cell."""
+    tc_pr = cell._tc.get_or_add_tcPr()
+    mar = OxmlElement("w:tcMar")
+    for side, w in (("top", 80), ("bottom", 80), ("left", 120), ("right", 120)):
+        el = OxmlElement(f"w:{side}")
+        el.set(qn("w:w"), str(w))
+        el.set(qn("w:type"), "dxa")
+        mar.append(el)
+    tc_pr.append(mar)
 
 
 def _shade_paragraph(paragraph, fill: str) -> None:

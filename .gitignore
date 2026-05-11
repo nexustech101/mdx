@@ -50,4 +50,4 @@ htmlcov/
 *.txt
 *.*shm
 *.*wal
-humanize*.md
+examples/
