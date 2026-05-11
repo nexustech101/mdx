@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mdx-cli"
+version = "0.1.0"
+description = "Convert Markdown documents into professionally formatted DOCX files."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "MDX Contributors" }
+]
+dependencies = [
+  "registers>=0.2.0",
+  "python-docx>=1.1.2",
+  "markdown-it-py>=3.0.0",
+]
+
+[project.scripts]
+mdx = "mdx.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

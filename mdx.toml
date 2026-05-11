@@ -1,0 +1,35 @@
+[project]
+name = "Software Documentation Bundle"
+author = "Your Name"
+
+[output]
+directory = "docs"
+overwrite = true
+
+[style]
+preset = "professional"
+template = "templates/professional.docx"
+
+[document]
+page_size = "letter"
+margins = "normal"
+toc = true
+page_numbers = true
+headers = true
+footers = true
+cover_page = true
+
+[markdown]
+enable_tables = true
+enable_footnotes = true
+enable_mermaid = true
+enable_toc = true
+enable_code_blocks = true
+
+[validation]
+strict = true
+check_placeholders = true
+check_pii = true
+check_heading_order = true
+check_empty_tables = true
+check_links = true
