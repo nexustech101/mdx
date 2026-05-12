@@ -1,6 +1,6 @@
 [project]
-name = "Software Documentation Bundle"
-author = "Your Name"
+name = "Software Documentation Converter"
+author = "cdefre3"
 
 [output]
 directory = "docs"
@@ -8,7 +8,6 @@ overwrite = true
 
 [style]
 preset = "professional"
-template = "templates/professional.docx"
 
 [document]
 page_size = "letter"

@@ -12,7 +12,7 @@ authors = [
   { name = "MDX Contributors" }
 ]
 dependencies = [
-  "registers[cli]>=0.2.0",
+  "registers[cli]>=7.2.4",
   "python-docx>=1.1.2",
   "markdown-it-py>=3.0.0",
   "docx2pdf>=0.1.8",
