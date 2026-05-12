@@ -9,18 +9,16 @@ Use this skill to create professional engineering documentation for a software p
 
 ## Core Philosophy
 
-Prefer fewer, better documents. Do not create a five-document template pack unless the user explicitly asks for it.
+Prefer fewer, better documents. Do not create a five-document template pack unless the user explicitly asks for it. Document files should be concise, focused, and prioritized by importance.
 
 Default to:
 
-1) `docs/engineering-report.md`
 2) `docs/architecture.md`
 3) `docs/project-spec.md`
 4) `docs/api-reference.md`
 
 Then convert them to:
 
-1. `docs/engineering-report.docx`
 2. `docs/architecture.docx`
 3. `docs/project-spec.docx`
 4. `docs/api-reference.docx`
@@ -138,16 +136,22 @@ Default: `professional`.
 
 ## Conversion Workflow
 
-Convert a single file (outputs `.docx` alongside the source):
+Convert a single file to DOCX (outputs `.docx` alongside the source):
 
 ```bash
-mdx convert docs/engineering-report.md
+mdx docx docs/engineering-report.md
 ```
 
 With explicit output path:
 
 ```bash
-mdx convert docs/engineering-report.md --output docs/engineering-report.docx
+mdx docx docs/engineering-report.md --output docs/engineering-report.docx
+```
+
+Convert to PDF (visually identical to DOCX; requires Microsoft Word):
+
+```bash
+mdx pdf docs/engineering-report.md
 ```
 
 Convert an entire directory at once:

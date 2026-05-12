@@ -1,6 +1,6 @@
 # MDX CLI Usage
 
-`mdx` converts Markdown reports into professional DOCX documents.
+`mdx` converts Markdown reports into professional DOCX and PDF documents.
 
 ## Install
 
@@ -8,31 +8,49 @@
 pip install .
 ```
 
-## Convert a single file
+## Convert to DOCX
+
+Convert a single file (output defaults to `report.docx` alongside the source):
 
 ```bash
-mdx convert report.md
+mdx docx report.md
 ```
 
-Output defaults to `report.docx` alongside the source. Override with `--output`:
+Override the output path with `--output`:
 
 ```bash
-mdx convert report.md --output docs/report.docx
+mdx docx report.md --output docs/report.docx
 ```
 
-## Convert a directory
+Convert every `.md` file in a directory:
 
 ```bash
-mdx convert docs/
+mdx docx docs/
 ```
 
-Converts every `.md` file in the directory to a `.docx` file alongside it.
+## Convert to PDF
+
+Convert a single file (output defaults to `report.pdf` alongside the source):
+
+```bash
+mdx pdf report.md
+```
+
+Convert every `.md` file in a directory:
+
+```bash
+mdx pdf docs/
+```
+
+PDF output is rendered via Microsoft Word, so it is visually identical to the DOCX output. Word must be installed for PDF conversion.
 
 ## Options
 
+Both `mdx docx` and `mdx pdf` accept the same flags:
+
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--output` | alongside source | Output `.docx` file or directory |
+| `--output` | alongside source | Output file or directory |
 | `--style` | `professional` | Style preset |
 | `--force` | off | Overwrite existing output files |
 | `--quiet` | off | Suppress output |
@@ -40,7 +58,7 @@ Converts every `.md` file in the directory to a `.docx` file alongside it.
 ## Style presets
 
 ```bash
-mdx convert report.md --style technical
+mdx docx report.md --style technical
 ```
 
 Available: `professional`, `technical`, `executive`, `academic`, `minimal`.

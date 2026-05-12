@@ -1,6 +1,6 @@
 # mdx
 
-`mdx` is a command-line tool for converting Markdown files into polished DOCX documents.
+`mdx` is a command-line tool for converting Markdown files into polished DOCX and PDF documents.
 
 ## Install
 
@@ -11,7 +11,12 @@ pip install .
 ## Quickstart
 
 ```bash
-mdx init --with-template
-mdx validate docs --strict
-mdx batch docs --output-dir docs --style professional --force
+# Convert to DOCX
+mdx docx report.md
+
+# Convert to PDF (requires Microsoft Word)
+mdx pdf report.md
+
+# Convert a whole directory
+mdx docx docs/ --style professional --force
 ```

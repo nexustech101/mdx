@@ -8,7 +8,8 @@ from registers.cli import types as t
 
 from . import __version__
 from .config import load_config
-from .converter import convert_markdown_to_docx
+from .docx_converter import convert_markdown_to_docx
+from .pdf_converter import convert_markdown_to_pdf
 from .styles import STYLE_PRESETS
 
 EXIT_OK = 0
@@ -71,37 +72,16 @@ def _discover_markdown_files(input_dir: Path) -> list[Path]:
     return sorted(p for p in input_dir.rglob("*.md") if p.is_file())
 
 
-@registry.register(
-    "convert",
-    description="Convert a Markdown file or directory to DOCX.",
-    examples=[
-        "mdx convert report.md",
-        "mdx convert docs/",
-        "mdx convert report.md --output report.docx",
-        "mdx convert docs/ --style technical --force",
-    ],
-    render=False,
-)
-@registry.argument("input", type=t.Path(exists=True), help="Markdown file or directory.")
-@registry.argument("output", type=str, default="", help="Output .docx file or directory (default: alongside source).")
-@registry.argument("style", type=str, default="", help="Style preset: professional, technical, executive, academic, minimal.")
-@registry.argument("force", type=bool, default=False, help="Overwrite existing output files.")
-@registry.argument("quiet", type=bool, default=False, help="Suppress output.")
-def convert(
-    input: Path,
-    output: str = "",
-    style: str = "",
-    force: bool = False,
-    quiet: bool = False,
-) -> None:
-    source = Path(input)
+def _run_conversion(source: Path, output: str, style: str, force: bool, quiet: bool, suffix: str) -> None:
+    """Shared dispatch logic for the ``docx`` and ``pdf`` commands."""
     resolved_style = _resolve_style(style or None)
+    converter = convert_markdown_to_docx if suffix == ".docx" else convert_markdown_to_pdf
 
     if source.is_file():
-        out = Path(output) if output else source.with_suffix(".docx")
+        out = Path(output) if output else source.with_suffix(suffix)
         _ensure_write_target(out, force=force)
         try:
-            convert_markdown_to_docx(source, out, style=resolved_style)
+            converter(source, out, style=resolved_style)
         except Exception as exc:
             _error(f"conversion failed: {exc}", code=EXIT_BACKEND)
         _log(f"{source.as_posix()} -> {out.as_posix()}", quiet=quiet)
@@ -113,16 +93,67 @@ def convert(
             _error("no Markdown files found.", code=EXIT_INPUT_NOT_FOUND, path=source)
         converted = 0
         for md_file in files:
-            dest = out_root / md_file.relative_to(source).with_suffix(".docx")
+            dest = out_root / md_file.relative_to(source).with_suffix(suffix)
             _ensure_write_target(dest, force=force)
             try:
-                convert_markdown_to_docx(md_file, dest, style=resolved_style)
+                converter(md_file, dest, style=resolved_style)
             except Exception as exc:
                 _error(f"conversion failed: {exc}", code=EXIT_BACKEND, path=md_file)
             converted += 1
             _log(f"{md_file.as_posix()} -> {dest.as_posix()}", quiet=quiet)
         _log(f"\n{converted} file(s) converted.", quiet=quiet)
 
+
+@registry.register(
+    "docx",
+    description="Convert a Markdown file or directory to DOCX.",
+    examples=[
+        "mdx docx report.md",
+        "mdx docx docs/",
+        "mdx docx report.md --output report.docx",
+        "mdx docx docs/ --style technical --force",
+    ],
+    render=False,
+)
+@registry.argument("input", type=t.Path(exists=True), help="Markdown file or directory.")
+@registry.argument("output", type=str, default="", help="Output .docx file or directory (default: alongside source).")
+@registry.argument("style", type=str, default="", help="Style preset: professional, technical, executive, academic, minimal.")
+@registry.argument("force", type=bool, default=False, help="Overwrite existing output files.")
+@registry.argument("quiet", type=bool, default=False, help="Suppress output.")
+def docx(
+    input: Path,
+    output: str = "",
+    style: str = "",
+    force: bool = False,
+    quiet: bool = False,
+) -> None:
+    _run_conversion(Path(input), output, style, force, quiet, suffix=".docx")
+
+
+@registry.register(
+    "pdf",
+    description="Convert a Markdown file or directory to PDF.",
+    examples=[
+        "mdx pdf report.md",
+        "mdx pdf docs/",
+        "mdx pdf report.md --output report.pdf",
+        "mdx pdf docs/ --style technical --force",
+    ],
+    render=False,
+)
+@registry.argument("input", type=t.Path(exists=True), help="Markdown file or directory.")
+@registry.argument("output", type=str, default="", help="Output .pdf file or directory (default: alongside source).")
+@registry.argument("style", type=str, default="", help="Style preset: professional, technical, executive, academic, minimal.")
+@registry.argument("force", type=bool, default=False, help="Overwrite existing output files.")
+@registry.argument("quiet", type=bool, default=False, help="Suppress output.")
+def pdf(
+    input: Path,
+    output: str = "",
+    style: str = "",
+    force: bool = False,
+    quiet: bool = False,
+) -> None:
+    _run_conversion(Path(input), output, style, force, quiet, suffix=".pdf")
 
 
 @registry.register("version", description="Show installed version.")

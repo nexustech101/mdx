@@ -1,34 +1,23 @@
+"""Markdown → DOCX converter.
+
+All OOXML rendering lives here.  Style definitions stay in :mod:`styles`;
+shared parsing types live in :mod:`parser`.
+"""
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass
 from pathlib import Path
 
 from docx import Document
 from docx.document import Document as DocumentType
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.text import WD_BREAK
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
+from .parser import ConvertResult, ReportHeader, extract_report_header
 from .styles import StylePreset, apply_document_style, rgb_hex
-
-
-@dataclass(frozen=True)
-class ConvertResult:
-    input_path: Path
-    output_path: Path
-    style: str
-
-
-@dataclass(frozen=True)
-class ReportHeader:
-    title: str
-    metadata: tuple[tuple[str, str], ...]
-    body_markdown: str
 
 
 def convert_markdown_to_docx(
@@ -38,10 +27,22 @@ def convert_markdown_to_docx(
     style: str,
     template_path: Path | None = None,
 ) -> ConvertResult:
+    """Convert *input_path* (Markdown) to *output_path* (DOCX).
+
+    Args:
+        input_path:    Source ``.md`` file.
+        output_path:   Destination ``.docx`` file.  Parent directories are
+                       created automatically.
+        style:         Name of a :data:`~styles.STYLE_PRESETS` key.
+        template_path: Optional ``.docx`` template to use as the base document.
+
+    Returns:
+        A :class:`~parser.ConvertResult` with paths and the resolved style name.
+    """
     markdown = input_path.read_text(encoding="utf-8")
     document = Document(template_path) if template_path else Document()
     preset = apply_document_style(document, style)
-    header = _extract_report_header(markdown)
+    header = extract_report_header(markdown)
     title = header.title or input_path.stem.replace("-", " ").title()
     document.core_properties.title = title
     _apply_report_header_footer(document, title, preset)
@@ -54,19 +55,14 @@ def convert_markdown_to_docx(
     return ConvertResult(input_path=input_path, output_path=output_path, style=style)
 
 
-def render_markdown_to_html(markdown: str) -> str:
-    parser = MarkdownIt("commonmark", {"breaks": True}).enable("table")
-    body = parser.render(markdown)
-    return body
-
+# ── Markdown renderer ─────────────────────────────────────────────────────────
 
 def _render_markdown(document: DocumentType, markdown: str, preset: StylePreset) -> None:
     parser = MarkdownIt("commonmark", {"breaks": True}).enable("table")
     tokens = parser.parse(markdown)
 
     i = 0
-    # Each entry: ("bullet"|"ordered", start_value)
-    list_stack: list[tuple[str, int]] = []
+    list_stack: list[tuple[str, int]] = []  # ("bullet"|"ordered", start_value)
     blockquote_depth = 0
 
     while i < len(tokens):
@@ -182,8 +178,6 @@ def _append_inline(paragraph, inline: Token, preset: StylePreset) -> None:
             _apply_run_shading(run, preset.code_fill)
 
         elif child.type == "image":
-            # Inline images can't be embedded without the source file; render
-            # a descriptive placeholder so content is not silently lost.
             alt = child.attrGet("alt") or "image"
             run = paragraph.add_run(f"[Image: {alt}]")
             run.italic = True
@@ -222,15 +216,12 @@ def _render_table(
     start_index: int,
     preset: StylePreset,
 ) -> int:
-    """Render a Markdown table, preserving all inline formatting in every cell.
+    """Render a Markdown table preserving all inline formatting in every cell.
 
-    Stores Token | None (inline tokens) rather than plain strings so that bold,
-    italic, code, and links inside table cells are faithfully reproduced.
+    Returns the index of the token immediately after ``table_close``.
     """
     i = start_index + 1
-    # header_inlines: inline token (or None) for each header column.
     header_inlines: list[Token | None] = []
-    # row_inlines: list of rows; each row is a list of inline tokens (or None).
     row_inlines: list[list[Token | None]] = []
     current_row: list[Token | None] = []
 
@@ -264,7 +255,6 @@ def _render_table(
     )
     table.autofit = True
 
-    # Header row.
     for c, inline_token in enumerate(header_inlines):
         cell = table.cell(0, c)
         p = cell.paragraphs[0]
@@ -272,7 +262,6 @@ def _render_table(
             _append_inline(p, inline_token, preset)
         _format_header_cell(cell, preset)
 
-    # Body rows.
     for r, row in enumerate(row_inlines, start=1):
         for c, inline_token in enumerate(row):
             cell = table.cell(r, c)
@@ -284,56 +273,22 @@ def _render_table(
     return i + 1
 
 
-def _extract_report_header(markdown: str) -> ReportHeader:
-    lines = markdown.splitlines()
-    title = ""
-    title_index: int | None = None
-    for index, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped.startswith("# "):
-            title = stripped[2:].strip()
-            title_index = index
-            break
-
-    if title_index is None:
-        return ReportHeader(title="", metadata=(), body_markdown=markdown)
-
-    metadata: list[tuple[str, str]] = []
-    end_index: int | None = None
-    metadata_re = re.compile(r"^\*\*(.+?):\*\*\s*(.+?)\s*$")
-    for index in range(title_index + 1, min(len(lines), title_index + 12)):
-        stripped = lines[index].strip()
-        if stripped == "---":
-            end_index = index + 1
-            break
-        if not stripped:
-            continue
-        match = metadata_re.match(stripped)
-        if not match:
-            break
-        metadata.append((match.group(1), match.group(2).strip()))
-
-    if not metadata or end_index is None:
-        return ReportHeader(title=title, metadata=(), body_markdown=markdown)
-
-    body = "\n".join(lines[end_index:]).lstrip()
-    return ReportHeader(title=title, metadata=tuple(metadata), body_markdown=body)
-
+# ── Cover page ────────────────────────────────────────────────────────────────
 
 def _add_cover_page(document: DocumentType, header: ReportHeader, preset: StylePreset) -> None:
-    # ── Top accent rule ───────────────────────────────────────────────────────
+    # Thick accent rule at the top.
     accent_bar = document.add_paragraph()
     accent_bar.paragraph_format.space_before = Pt(0)
     accent_bar.paragraph_format.space_after = Pt(0)
     _set_paragraph_bottom_border(accent_bar, color=rgb_hex(preset.accent_color), size="24")
 
-    # ── Title ─────────────────────────────────────────────────────────────────
+    # Title.
     title_para = document.add_paragraph(style="Title")
     title_para.add_run(header.title)
     title_para.paragraph_format.space_before = Pt(16)
     title_para.paragraph_format.space_after = Pt(4)
 
-    # ── Subtitle: "Document Type" field rendered as italic sub-heading ─────────
+    # Subtitle: "Document Type" field as italic sub-heading.
     meta_dict = {k: v for k, v in header.metadata}
     subtitle = meta_dict.get("Document Type", "")
     body_meta = [(k, v) for k, v in header.metadata if k != "Document Type"]
@@ -348,36 +303,29 @@ def _add_cover_page(document: DocumentType, header: ReportHeader, preset: StyleP
         sub_run.italic = True
         sub_run.font.color.rgb = RGBColor(*preset.heading_color)
 
-    # ── Separator rule ────────────────────────────────────────────────────────
+    # Thin separator rule.
     sep = document.add_paragraph()
     sep.paragraph_format.space_before = Pt(0)
     sep.paragraph_format.space_after = Pt(20)
     _set_paragraph_bottom_border(sep, color=rgb_hex(preset.accent_color), size="8")
 
-    # ── Metadata: borderless two-column table ─────────────────────────────────
-    if body_meta:
-        tbl = document.add_table(rows=len(body_meta), cols=2)
-        tbl.autofit = False
-        for row_idx, (label, value) in enumerate(body_meta):
-            row = tbl.rows[row_idx]
-            lc = row.cells[0]
-            lp = lc.paragraphs[0]
-            lp.paragraph_format.space_after = Pt(3)
-            lr = lp.add_run(label)
-            lr.bold = True
-            lr.font.name = preset.body_font
-            lr.font.size = Pt(preset.body_size)
-            _cover_meta_cell(lc, width_twips=2160)  # 1.5 in
-            vc = row.cells[1]
-            vp = vc.paragraphs[0]
-            vp.paragraph_format.space_after = Pt(3)
-            vr = vp.add_run(value)
-            vr.font.name = preset.body_font
-            vr.font.size = Pt(preset.body_size)
-            _cover_meta_cell(vc, width_twips=6480)  # 4.5 in
+    # Plain key-value metadata lines.
+    for label, value in body_meta:
+        p = document.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(2)
+        key_run = p.add_run(f"{label}: ")
+        key_run.bold = True
+        key_run.font.name = preset.body_font
+        key_run.font.size = Pt(preset.body_size)
+        val_run = p.add_run(value)
+        val_run.font.name = preset.body_font
+        val_run.font.size = Pt(preset.body_size)
 
     document.add_page_break()
 
+
+# ── Header / footer ───────────────────────────────────────────────────────────
 
 def _apply_report_header_footer(
     document: DocumentType,
@@ -385,8 +333,8 @@ def _apply_report_header_footer(
     preset: StylePreset,
 ) -> None:
     for section in document.sections:
-        header = section.header
-        header_para = header.paragraphs[0]
+        hdr = section.header
+        header_para = hdr.paragraphs[0]
         header_para.text = title
         header_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         header_para.paragraph_format.space_after = Pt(0)
@@ -395,8 +343,8 @@ def _apply_report_header_footer(
             run.font.size = Pt(9)
             run.font.color.rgb = RGBColor(120, 120, 120)
 
-        footer = section.footer
-        footer_para = footer.paragraphs[0]
+        ftr = section.footer
+        footer_para = ftr.paragraphs[0]
         footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         footer_para.paragraph_format.space_before = Pt(0)
         run = footer_para.add_run("Page ")
@@ -409,26 +357,17 @@ def _apply_report_header_footer(
 def _append_page_number(paragraph) -> None:
     begin = OxmlElement("w:fldChar")
     begin.set(qn("w:fldCharType"), "begin")
-
     instruction = OxmlElement("w:instrText")
     instruction.set(qn("xml:space"), "preserve")
     instruction.text = "PAGE"
-
     end = OxmlElement("w:fldChar")
     end.set(qn("w:fldCharType"), "end")
-
     for element in (begin, instruction, end):
         run = paragraph.add_run()
         run._r.append(element)
 
 
-def _append_preserved_text(run, text: str) -> None:
-    lines = text.splitlines() or [""]
-    for index, line in enumerate(lines):
-        if index:
-            run.add_break()
-        run.add_text(line)
-
+# ── Cell and run formatting helpers ──────────────────────────────────────────
 
 def _format_header_cell(cell, preset: StylePreset) -> None:
     _shade_cell(cell, preset.table_header_fill)
@@ -451,21 +390,6 @@ def _format_body_cell(cell) -> None:
         paragraph.paragraph_format.space_after = Pt(0)
 
 
-def _cover_meta_cell(cell, *, width_twips: int) -> None:
-    """Set width and remove all borders on a cover-page metadata table cell."""
-    tc_pr = cell._tc.get_or_add_tcPr()
-    tcW = OxmlElement("w:tcW")
-    tcW.set(qn("w:w"), str(width_twips))
-    tcW.set(qn("w:type"), "dxa")
-    tc_pr.append(tcW)
-    borders = OxmlElement("w:tcBorders")
-    for side in ("top", "left", "bottom", "right", "insideH", "insideV"):
-        el = OxmlElement(f"w:{side}")
-        el.set(qn("w:val"), "nil")
-        borders.append(el)
-    tc_pr.append(borders)
-
-
 def _set_cell_margins(cell) -> None:
     """Add comfortable padding inside a table cell."""
     tc_pr = cell._tc.get_or_add_tcPr()
@@ -477,6 +401,8 @@ def _set_cell_margins(cell) -> None:
         mar.append(el)
     tc_pr.append(mar)
 
+
+# ── Shading helpers ───────────────────────────────────────────────────────────
 
 def _shade_paragraph(paragraph, fill: str) -> None:
     """Apply a solid background fill to a paragraph."""
@@ -508,6 +434,8 @@ def _apply_run_shading(run, fill: str) -> None:
     rPr.append(shd)
 
 
+# ── Border helpers ────────────────────────────────────────────────────────────
+
 def _set_paragraph_bottom_border(paragraph, *, color: str, size: str) -> None:
     p_pr = paragraph._p.get_or_add_pPr()
     borders = p_pr.find(qn("w:pBdr"))
@@ -536,4 +464,9 @@ def _set_paragraph_left_border(paragraph, *, color: str) -> None:
     borders.append(left)
 
 
-# rgb_hex is provided by styles.py and re-exported from there.
+def _append_preserved_text(run, text: str) -> None:
+    lines = text.splitlines() or [""]
+    for index, line in enumerate(lines):
+        if index:
+            run.add_break()
+        run.add_text(line)
